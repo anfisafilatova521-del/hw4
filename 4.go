@@ -36,6 +36,23 @@ func getCompareString(line string, numFields int, numChars int, ignoreCase bool)
 	return s
 }
 
+func printLine(line string, count int, mode string, w *os.File) {
+	switch mode {
+	case "c":
+		fmt.Fprintf(w, "%d %s\n", count, line)
+	case "d":
+		if count >= 2 {
+			fmt.Fprintln(w, line)
+		}
+	case "u":
+		if count == 1 {
+			fmt.Fprintln(w, line)
+		}
+	default:
+		fmt.Fprintln(w, line)
+	}
+}
+
 func process(mas []string, mode string, fFlag, sFlag int, iFlag bool, outputFile *os.File) {
 	if len(mas) == 0 {
 		return
@@ -49,37 +66,23 @@ func process(mas []string, mode string, fFlag, sFlag int, iFlag bool, outputFile
 		if curKey == nextKey {
 			k++
 		} else {
-			if mode == "c" {
-				fmt.Fprintf(outputFile, "%d %s\n", k, mas[i])
-			} else if mode == "d" {
-				if k >= 2 {
-					fmt.Fprintln(outputFile, mas[i])
-				}
-			} else if mode == "u" {
-				if k == 1 {
-					fmt.Fprintln(outputFile, mas[i])
-				}
-			} else {
-				fmt.Fprintln(outputFile, mas[i])
-			}
+			printLine(mas[i], k, mode, outputFile)
 			k = 1
 		}
 	}
+	printLine(mas[len(mas)-1], k, mode, outputFile)
+}
 
-	 
-	if mode == "c" {
-		fmt.Fprintf(outputFile, "%d %s\n", k, mas[len(mas)-1])
-	} else if mode == "d" {
-		if k >= 2 {
-			fmt.Fprintln(outputFile, mas[len(mas)-1])
-		}
-	} else if mode == "u" {
-		if k == 1 {
-			fmt.Fprintln(outputFile, mas[len(mas)-1])
-		}
-	} else {
-		fmt.Fprintln(outputFile, mas[len(mas)-1])
+func readLines(inputFile *os.File) []string {
+	scanner := bufio.NewScanner(inputFile)
+	var mas []string
+	for scanner.Scan() {
+		mas = append(mas, scanner.Text())
 	}
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Ошибка чтения: %v", err)
+	}
+	return mas
 }
 
 func main() {
@@ -122,14 +125,7 @@ func main() {
 		outputFile = os.Stdout
 	}
 
-	scanner := bufio.NewScanner(inputFile)
-	var mas []string
-	for scanner.Scan() {
-		mas = append(mas, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatalf("Ошибка чтения: %v", err)
-	}
+	mas := readLines(inputFile)
 
 	mode := ""
 	if *cFlag {
